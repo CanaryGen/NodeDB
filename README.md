@@ -50,6 +50,7 @@ This file contains server configuration settings such as the port number.
 Example:
 ```yaml
 port: 3000
+ip: 0.0.0.0
 ```
 
 ### db.yml
