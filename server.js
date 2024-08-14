@@ -114,6 +114,6 @@ app.delete('/data/:key', requireAuth, (req, res) => {
     }
 });
 
-app.listen(config.port, () => {
-    console.log(`Server is running on port ${config.port}`);
+app.listen(config.port, config.ip, () => {
+    console.log(`Server is running on ${config.ip}:${config.port}`);
 });
