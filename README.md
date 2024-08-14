@@ -38,7 +38,7 @@ Before you begin, ensure you have met the following requirements:
 
 2. **Install dependencies**:
    ```sh
-   npm install
+   npm install express js-yaml body-parser bcrypt
    ```
 
 ## Configuration
