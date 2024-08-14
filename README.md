@@ -1,101 +1,177 @@
-# NodeDB
+# NodeDB - Local File-Based Database
 
-NodeDB is a simple, local file-based database system built using Node.js. It leverages JSON files for data storage and YAML files for configuration and authentication, making it ideal for small-scale applications requiring a straightforward data storage solution.
+NodeDB is a simple local file-based database system implemented in Node.js. It allows you to store, retrieve, update, and delete data using a text file as the backend storage. The system includes basic authentication to secure all data operations.
 
 ## Table of Contents
 
 - [Features](#features)
+- [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Usage](#usage)
-- [API Endpoints](#api-endpoints)
+  - [Authentication](#authentication)
+  - [API Endpoints](#api-endpoints)
+- [Database Structure](#database-structure)
 - [Examples](#examples)
+- [Troubleshooting](#troubleshooting)
 
 ## Features
 
-- **Local File-Based Storage**: Uses JSON files for data storage.
-- **User Authentication**: Secure access with user authentication via YAML configuration.
-- **RESTful API Endpoints**: Easy data manipulation through RESTful API endpoints.
-- **Lightweight and Simple**: Ideal for small-scale applications.
+- **Authentication**: Secure your data with basic HTTP authentication for all operations.
+- **CRUD Operations**: Perform Create, Read, Update, and Delete operations on your data.
+- **File-Based Storage**: Data is stored in a plain text file for simplicity.
+
+## Prerequisites
+
+Before you begin, ensure you have met the following requirements:
+
+- **Node.js**: (v14.x or higher)
+- **npm**: (v6.x or higher)
 
 ## Installation
 
-1. Clone the repository:
-   ```bash
+1. **Clone the repository**:
+   ```sh
    git clone https://github.com/yourusername/NodeDB.git
    cd NodeDB
    ```
 
-2. Install dependencies:
-   ```bash
-   npm install express js-yaml body-parser
-   ```
-
-3. Start the server:
-   ```bash
-   node server.js
+2. **Install dependencies**:
+   ```sh
+   npm install
    ```
 
 ## Configuration
 
-### `config.yml`
+### config.yml
 
-Configure the port number for the server:
+This file contains server configuration settings such as the port number.
 
+Example:
 ```yaml
 port: 3000
 ```
 
-### `db.yml`
+### db.yml
 
-Set up user credentials for authentication:
+This file contains user authentication data. Each user has a username and a hashed password.
 
+Example:
 ```yaml
 users:
-  admin:
-    username: "admin"
-    password: "admin_password"
+  - username: admin
+    password: $2b$10$GZk7n/b5QqKJZ9Z5z5z5zO
+```
+
+### db/database.txt
+
+This file stores the actual data in a simple key-value format. Each line represents a key and its associated values.
+
+Example:
+```
+key1 value1 value2
+key2 value1 value2 value3
+key3 value1
 ```
 
 ## Usage
 
+### Starting the Server
+
+To start the server, run the following command:
+```sh
+node server.js
+```
+
 ### Authentication
 
-Include the username and password in the request headers for authentication:
+To authenticate, include the `Authorization` header with your requests. The header value should be in the format `Basic <base64-encoded-credentials>`.
 
-```bash
-curl -X GET http://localhost:3000/data -H "username: admin" -H "password: admin_password"
+Example:
+```sh
+curl -X POST http://localhost:3000/data -H "Content-Type: application/json" -H "Authorization: Basic YWRtaW46YWRtaW5wYXNzd29yZA==" -d "{\"key\": \"key4\", \"values\": [\"value1\", \"value2\", \"value3\"]}"
 ```
 
 ### API Endpoints
 
-- **GET /data**: Retrieve all data.
-- **POST /data**: Add new data.
-- **PUT /data/:key**: Update data for a specific key.
-- **DELETE /data/:key**: Delete data for a specific key.
+- **POST /login**: Authenticate with the server.
+  ```sh
+  curl -X POST http://localhost:3000/login -H "Content-Type: application/json" -d "{\"username\": \"admin\", \"password\": \"adminpassword\"}"
+  ```
 
-### Examples
+- **GET /data/:key**: Retrieve values for a specific key.
+  ```sh
+  curl http://localhost:3000/data/key1 -H "Authorization: Basic YWRtaW46YWRtaW5wYXNzd29yZA=="
+  ```
 
-#### Adding Data
+- **GET /data/:key/:value**: Check if a specific value exists for a key.
+  ```sh
+  curl http://localhost:3000/data/key1/value1 -H "Authorization: Basic YWRtaW46YWRtaW5wYXNzd29yZA=="
+  ```
 
-```bash
-curl -X POST http://localhost:3000/data -H "Content-Type: application/json" -H "username: admin" -H "password: admin_password" -d '{"key1": "value1"}'
+- **POST /data**: Add a new key and values.
+  ```sh
+  curl -X POST http://localhost:3000/data -H "Content-Type: application/json" -H "Authorization: Basic YWRtaW46YWRtaW5wYXNzd29yZA==" -d "{\"key\": \"key4\", \"values\": [\"value1\", \"value2\", \"value3\"]}"
+  ```
+
+- **PUT /data/:key**: Update values for an existing key.
+  ```sh
+  curl -X PUT http://localhost:3000/data/key1 -H "Content-Type: application/json" -H "Authorization: Basic YWRtaW46YWRtaW5wYXNzd29yZA==" -d "{\"values\": [\"newValue1\", \"newValue2\"]}"
+  ```
+
+- **DELETE /data/:key**: Delete a key and its values.
+  ```sh
+  curl -X DELETE http://localhost:3000/data/key1 -H "Authorization: Basic YWRtaW46YWRtaW5wYXNzd29yZA=="
+  ```
+
+## Database Structure
+
+The database is stored in a plain text file named `database.txt` located in the `db` directory. Each line in the file represents a key and its associated values, separated by spaces.
+
+Example:
+```
+key1 value1 value2
+key2 value1 value2 value3
+key3 value1
 ```
 
-#### Retrieving Data
+### Key-Value Format
 
-```bash
-curl -X GET http://localhost:3000/data -H "username: admin" -H "password: admin_password"
+- **Key**: The identifier for the data.
+- **Values**: The data associated with the key, separated by spaces.
+
+## Examples
+
+### Adding a New Key and Values
+
+```sh
+curl -X POST http://localhost:3000/data -H "Content-Type: application/json" -H "Authorization: Basic YWRtaW46YWRtaW5wYXNzd29yZA==" -d "{\"key\": \"key4\", \"values\": [\"value1\", \"value2\", \"value3\"]}"
 ```
 
-#### Updating Data
+### Retrieving Values for a Key
 
-```bash
-curl -X PUT http://localhost:3000/data/key1 -H "Content-Type: application/json" -H "username: admin" -H "password: admin_password" -d '{"key1": "new_value"}'
+```sh
+curl http://localhost:3000/data/key1 -H "Authorization: Basic YWRtaW46YWRtaW5wYXNzd29yZA=="
 ```
 
-#### Deleting Data
+### Updating Values for a Key
 
-```bash
-curl -X DELETE http://localhost:3000/data/key1 -H "username: admin" -H "password: admin_password"
+```sh
+curl -X PUT http://localhost:3000/data/key1 -H "Content-Type: application/json" -H "Authorization: Basic YWRtaW46YWRtaW5wYXNzd29yZA==" -d "{\"values\": [\"newValue1\", \"newValue2\"]}"
 ```
+
+### Deleting a Key
+
+```sh
+curl -X DELETE http://localhost:3000/data/key1 -H "Authorization: Basic YWRtaW46YWRtaW5wYXNzd29yZA=="
+```
+
+## Troubleshooting
+
+If you encounter any issues, please check the following:
+
+- Ensure that the server is running.
+- Verify that the `Authorization` header is correctly formatted.
+- Check the configuration files for any misconfigurations.
+
+If the problem persists, feel free to open an issue on the GitHub repository.
