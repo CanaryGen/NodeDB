@@ -10,8 +10,6 @@ NodeDB is a simple, local file-based database system built using Node.js. It lev
 - [Usage](#usage)
 - [API Endpoints](#api-endpoints)
 - [Examples](#examples)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## Features
 
