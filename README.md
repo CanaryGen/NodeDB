@@ -1,6 +1,6 @@
 # NodeDB - Local File-Based Database
 
-NodeDB is a simple local file-based database system implemented in Node.js. It allows you to store, retrieve, update, and delete data using a text file as the backend storage. The system includes basic authentication to secure all data operations.
+NodeDB is a simple local file-based database system implemented in Node.js. It allows you to store, retrieve, update, and delete data using various file formats (text, JSON, YAML) as the backend storage. The system includes advanced authentication using JWT and supports multiple database styles, including an encrypted variant.
 
 ## Table of Contents
 
@@ -11,18 +11,21 @@ NodeDB is a simple local file-based database system implemented in Node.js. It a
 - [Usage](#usage)
   - [Authentication](#authentication)
   - [API Endpoints](#api-endpoints)
-- [Database Structure](#database-structure)
+    - [With JWT Authentication](#with-jwt-authentication)
+    - [Without JWT Authentication](#without-jwt-authentication)
+- [Database Styles](#database-styles)
 - [Examples](#examples)
 - [Troubleshooting](#troubleshooting)
 
 ## Features
 
-- **Authentication**: Secure your data with basic HTTP authentication for all operations.
+- **JWT Authentication**: Secure your data with JSON Web Token (JWT) authentication for all operations.
+- **Multiple Database Styles**: Supports text, JSON, YAML, and encrypted database formats.
 - **CRUD Operations**: Perform Create, Read, Update, and Delete operations on your data.
-- **File-Based Storage**: Data is stored in a plain text file for simplicity.
 - **Rate Limiting**: Limits the number of requests from an IP to prevent abuse.
 - **CORS Support**: Allows cross-origin requests for easier integration with front-end applications.
 - **Input Validation**: Ensures that the data being sent to the server is in the correct format.
+- **Customizable Configuration**: Easily configure the server, authentication, and database settings.
 
 ## Prerequisites
 
@@ -41,19 +44,27 @@ Before you begin, ensure you have met the following requirements:
 
 2. **Install dependencies**:
    ```sh
-   npm install express js-yaml body-parser bcrypt winston express-rate-limit cors joi
+   npm install express js-yaml body-parser bcrypt winston express-rate-limit cors joi jsonwebtoken crypto
    ```
 
 ## Configuration
 
 ### config.yml
 
-This file contains server configuration settings such as the port number.
+This file contains server configuration settings such as the port number, JWT settings, and rate limiting.
 
 Example:
 ```yaml
 port: 3000
 ip: 0.0.0.0
+JWT:
+  useJWT: true
+  secret: "your_secret_key"
+databaseStyle: "nodedb" # Possible values: nodedb, json, yml, sec_nodedb
+encryptionKey: "your_encryption_key" # Only required if databaseStyle is sec_nodedb
+rateLimit:
+  windowMs: 15 * 60 * 1000 # 15 minutes
+  max: 100 # Limit each IP to 100 requests per windowMs
 ```
 
 ### db.yml
@@ -67,16 +78,14 @@ users:
     password: $2b$10$GZk7n/b5QqKJZ9Z5z5z5zO
 ```
 
-### db/database.txt
+### Database Files
 
-This file stores the actual data in a simple key-value format. Each line represents a key and its associated values.
+Depending on the `databaseStyle` setting in `config.yml`, the data will be stored in different formats:
 
-Example:
-```
-key1 value1 value2
-key2 value1 value2 value3
-key3 value1
-```
+- **nodedb**: `db/database.txt`
+- **json**: `db/database.json`
+- **yml**: `db/database.yml`
+- **sec_nodedb**: `db/sec_database.txt` (encrypted)
 
 ## Usage
 
@@ -89,18 +98,47 @@ node server.js
 
 ### Authentication
 
-To authenticate, include the `Authorization` header with your requests. The header value should be in the format `Basic <base64-encoded-credentials>`.
-
-Example:
-```sh
-curl -X POST http://localhost:3000/data -H "Content-Type: application/json" -H "Authorization: Basic YWRtaW46YWRtaW5wYXNzd29yZA==" -d "{\"key\": \"key4\", \"values\": [\"value1\", \"value2\", \"value3\"]}"
-```
+To authenticate, include the `Authorization` header with your requests. The header value should be in the format `Bearer <JWT-token>` if JWT is enabled, or `Basic <base64-encoded-credentials>` if JWT is disabled.
 
 ### API Endpoints
 
-- **POST /login**: Authenticate with the server.
+#### With JWT Authentication
+
+- **POST /login**: Authenticate with the server and get a JWT token.
   ```sh
   curl -X POST http://localhost:3000/login -H "Content-Type: application/json" -d "{\"username\": \"admin\", \"password\": \"adminpassword\"}"
+  ```
+
+- **GET /data/:key**: Retrieve values for a specific key.
+  ```sh
+  curl http://localhost:3000/data/key1 -H "Authorization: Bearer <JWT-token>"
+  ```
+
+- **GET /data/:key/:value**: Check if a specific value exists for a key.
+  ```sh
+  curl http://localhost:3000/data/key1/value1 -H "Authorization: Bearer <JWT-token>"
+  ```
+
+- **POST /data**: Add a new key and values.
+  ```sh
+  curl -X POST http://localhost:3000/data -H "Content-Type: application/json" -H "Authorization: Bearer <JWT-token>" -d "{\"key\": \"key4\", \"values\": [\"value1\", \"value2\", \"value3\"]}"
+  ```
+
+- **PUT /data/:key**: Update values for an existing key.
+  ```sh
+  curl -X PUT http://localhost:3000/data/key1 -H "Content-Type: application/json" -H "Authorization: Bearer <JWT-token>" -d "{\"values\": [\"newValue1\", \"newValue2\"]}"
+  ```
+
+- **DELETE /data/:key**: Delete a key and its values.
+  ```sh
+  curl -X DELETE http://localhost:3000/data/key1 -H "Authorization: Bearer <JWT-token>"
+  ```
+
+#### Without JWT Authentication
+
+- **POST /data**: Add a new key and values.
+  ```sh
+  curl -X POST http://localhost:3000/data -H "Content-Type: application/json" -H "Authorization: Basic YWRtaW46YWRtaW5wYXNzd29yZA==" -d "{\"key\": \"key4\", \"values\": [\"value1\", \"value2\", \"value3\"]}"
   ```
 
 - **GET /data/:key**: Retrieve values for a specific key.
@@ -113,11 +151,6 @@ curl -X POST http://localhost:3000/data -H "Content-Type: application/json" -H "
   curl http://localhost:3000/data/key1/value1 -H "Authorization: Basic YWRtaW46YWRtaW5wYXNzd29yZA=="
   ```
 
-- **POST /data**: Add a new key and values.
-  ```sh
-  curl -X POST http://localhost:3000/data -H "Content-Type: application/json" -H "Authorization: Basic YWRtaW46YWRtaW5wYXNzd29yZA==" -d "{\"key\": \"key4\", \"values\": [\"value1\", \"value2\", \"value3\"]}"
-  ```
-
 - **PUT /data/:key**: Update values for an existing key.
   ```sh
   curl -X PUT http://localhost:3000/data/key1 -H "Content-Type: application/json" -H "Authorization: Basic YWRtaW46YWRtaW5wYXNzd29yZA==" -d "{\"values\": [\"newValue1\", \"newValue2\"]}"
@@ -128,25 +161,24 @@ curl -X POST http://localhost:3000/data -H "Content-Type: application/json" -H "
   curl -X DELETE http://localhost:3000/data/key1 -H "Authorization: Basic YWRtaW46YWRtaW5wYXNzd29yZA=="
   ```
 
-## Database Structure
+## Database Styles
 
-The database is stored in a plain text file named `database.txt` located in the `db` directory. Each line in the file represents a key and its associated values, separated by spaces.
-
-Example:
-```
-key1 value1 value2
-key2 value1 value2 value3
-key3 value1
-```
-
-### Key-Value Format
-
-- **Key**: The identifier for the data.
-- **Values**: The data associated with the key, separated by spaces.
+- **nodedb**: Plain text file with key-value pairs.
+- **json**: JSON file with key-value pairs.
+- **yml**: YAML file with key-value pairs.
+- **sec_nodedb**: Encrypted plain text file with key-value pairs.
 
 ## Examples
 
 ### Adding a New Key and Values
+
+#### With JWT Authentication
+
+```sh
+curl -X POST http://localhost:3000/data -H "Content-Type: application/json" -H "Authorization: Bearer <JWT-token>" -d "{\"key\": \"key4\", \"values\": [\"value1\", \"value2\", \"value3\"]}"
+```
+
+#### Without JWT Authentication
 
 ```sh
 curl -X POST http://localhost:3000/data -H "Content-Type: application/json" -H "Authorization: Basic YWRtaW46YWRtaW5wYXNzd29yZA==" -d "{\"key\": \"key4\", \"values\": [\"value1\", \"value2\", \"value3\"]}"
@@ -154,17 +186,41 @@ curl -X POST http://localhost:3000/data -H "Content-Type: application/json" -H "
 
 ### Retrieving Values for a Key
 
+#### With JWT Authentication
+
+```sh
+curl http://localhost:3000/data/key1 -H "Authorization: Bearer <JWT-token>"
+```
+
+#### Without JWT Authentication
+
 ```sh
 curl http://localhost:3000/data/key1 -H "Authorization: Basic YWRtaW46YWRtaW5wYXNzd29yZA=="
 ```
 
 ### Updating Values for a Key
 
+#### With JWT Authentication
+
+```sh
+curl -X PUT http://localhost:3000/data/key1 -H "Content-Type: application/json" -H "Authorization: Bearer <JWT-token>" -d "{\"values\": [\"newValue1\", \"newValue2\"]}"
+```
+
+#### Without JWT Authentication
+
 ```sh
 curl -X PUT http://localhost:3000/data/key1 -H "Content-Type: application/json" -H "Authorization: Basic YWRtaW46YWRtaW5wYXNzd29yZA==" -d "{\"values\": [\"newValue1\", \"newValue2\"]}"
 ```
 
 ### Deleting a Key
+
+#### With JWT Authentication
+
+```sh
+curl -X DELETE http://localhost:3000/data/key1 -H "Authorization: Bearer <JWT-token>"
+```
+
+#### Without JWT Authentication
 
 ```sh
 curl -X DELETE http://localhost:3000/data/key1 -H "Authorization: Basic YWRtaW46YWRtaW5wYXNzd29yZA=="
