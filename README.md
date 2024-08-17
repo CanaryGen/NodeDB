@@ -20,6 +20,9 @@ NodeDB is a simple local file-based database system implemented in Node.js. It a
 - **Authentication**: Secure your data with basic HTTP authentication for all operations.
 - **CRUD Operations**: Perform Create, Read, Update, and Delete operations on your data.
 - **File-Based Storage**: Data is stored in a plain text file for simplicity.
+- **Rate Limiting**: Limits the number of requests from an IP to prevent abuse.
+- **CORS Support**: Allows cross-origin requests for easier integration with front-end applications.
+- **Input Validation**: Ensures that the data being sent to the server is in the correct format.
 
 ## Prerequisites
 
@@ -38,7 +41,7 @@ Before you begin, ensure you have met the following requirements:
 
 2. **Install dependencies**:
    ```sh
-   npm install express js-yaml body-parser bcrypt
+   npm install express js-yaml body-parser bcrypt winston express-rate-limit cors joi
    ```
 
 ## Configuration
